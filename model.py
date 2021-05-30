@@ -94,12 +94,46 @@ class PublicImageModelWrapper(ImageModelWrapper):
     def label_to_id(self, label):
         return self.labels.index(label)
 
+class ResNet50_cutted(torch.nn.Module):
+    def __init__(self, resnet50, bottleneck):
+        super(ResNet50_cutted, self).__init__()
+        names = list(resnet50._modules.keys())
+        # print("ResNet50_cutted.names: ", names)
+        layers = list(resnet50.children())
+        # print("ResNet50_cutted.layers: ", layers)
+        self.layers = torch.nn.ModuleList()
+        self.layers_names = []
+
+        bottleneck_met = False
+        for name, layer in zip(names, layers):
+            if name == bottleneck:
+                bottleneck_met = True
+                continue  # because we already have the output of the bottleneck layer
+            if not bottleneck_met:
+                continue
+
+            self.layers.append(layer)
+            self.layers_names.append(name)
+        # print("ResNet50_cutted self.layers", self.layers)
+        # print("ResNet50_cutted self.layers_names", self.layers_names)
+
+    def forward(self, x):
+        y = x
+        for i in range(len(self.layers)):
+            # pre-forward process
+            if self.layers_names[i] == 'fc':
+                y = torch.flatten(y, 1)
+            y = self.layers[i](y)
+        return y
+
 
 class InceptionV3_cutted(torch.nn.Module):
     def __init__(self, inception_v3, bottleneck):
         super(InceptionV3_cutted, self).__init__()
         names = list(inception_v3._modules.keys())
         layers = list(inception_v3.children())
+        # print("Inception_v3_cutted.names: ", names)
+        # print("Inception_v3_cutted.layers: ", layers)
 
         self.layers = torch.nn.ModuleList()
         self.layers_names = []
@@ -116,20 +150,27 @@ class InceptionV3_cutted(torch.nn.Module):
 
             self.layers.append(layer)
             self.layers_names.append(name)
+        # print("Inception_v3_cutted self.layers", self.layers)
+        # print("Inception_v3_cutted self.layers_names", self.layers_names)
 
     def forward(self, x):
         y = x
         for i in range(len(self.layers)):
             # pre-forward process
-            if self.layers_names[i] == 'Conv2d_3b_1x1':
-                y = F.max_pool2d(y, kernel_size=3, stride=2)
-            elif self.layers_names[i] == 'Mixed_5b':
-                y = F.max_pool2d(y, kernel_size=3, stride=2)
-            elif self.layers_names[i] == 'fc':
-                y = F.adaptive_avg_pool2d(y, (1, 1))
-                y = F.dropout(y, training=self.training)
+            # if self.layers_names[i] == 'Conv2d_3b_1x1':
+            #     y = F.max_pool2d(y, kernel_size=3, stride=2)
+            # elif self.layers_names[i] == 'Mixed_5b':
+            #     y = F.max_pool2d(y, kernel_size=3, stride=2)
+            # elif self.layers_names[i] == 'fc':
+            #     y = F.adaptive_avg_pool2d(y, (1, 1))
+            #     y = F.dropout(y, training=self.training)
+            #     y = y.view(y.size(0), -1)
+            if self.layers_names[i] == 'fc':
                 y = y.view(y.size(0), -1)
 
+            # print(self.layers_names[i])
+
+            # print(y.shape)
             y = self.layers[i](y)
         return y
 
@@ -140,8 +181,8 @@ class InceptionV3Wrapper(PublicImageModelWrapper):
         image_shape = [299, 299, 3]
         super(InceptionV3Wrapper, self).__init__(image_shape=image_shape,
                                                  labels_path=labels_path)
-        # self.model = torchvision.models.inception_v3(pretrained=True, transform_input=True)
-        self.model = torchvision.models.resnet18(pretrained=True)
+        self.model = torchvision.models.inception_v3(pretrained=True, transform_input=True)
+        # self.model = torchvision.models.resnet50(pretrained=True)
         self.model_name = 'InceptionV3_public'
 
     def forward(self, x):
@@ -149,3 +190,18 @@ class InceptionV3Wrapper(PublicImageModelWrapper):
 
     def get_cutted_model(self, bottleneck):
         return InceptionV3_cutted(self.model, bottleneck)
+
+class ResNet50Wrapper(PublicImageModelWrapper):
+
+    def __init__(self, labels_path):
+        image_shape = [224, 224, 3]
+        super(ResNet50Wrapper, self).__init__(image_shape=image_shape,
+                                                 labels_path=labels_path)
+        self.model = torchvision.models.resnet50(pretrained=True)
+        self.model_name = 'ResNet50_public'
+
+    def forward(self, x):
+        return self.model.forward(x)
+
+    def get_cutted_model(self, bottleneck):
+        return ResNet50_cutted(self.model, bottleneck)

@@ -23,7 +23,9 @@ working_dir = './tcav_class_test'
 activation_dir = working_dir + '/activations/'
 cav_dir = working_dir + '/cavs/'
 # bottlenecks = ['Mixed_5d', 'Conv2d_2a_3x3']
-bottlenecks = ['layer4']
+# bottlenecks = ['Conv2d_2a_3x3']
+bottlenecks = ['layer2','layer4']
+# bottlenecks = ['layer4']
 
 utils.make_dir_if_not_exists(working_dir)
 utils.make_dir_if_not_exists(activation_dir)
@@ -37,7 +39,8 @@ concepts = ["dotted", "striped", "zigzagged"]
 # random_counterpart = 'random500_1'
 LABEL_PATH = './imagenet_comp_graph_label_strings.txt'
 
-mymodel = model.InceptionV3Wrapper(LABEL_PATH)
+# mymodel = model.InceptionV3Wrapper(LABEL_PATH)
+mymodel = model.ResNet50Wrapper(LABEL_PATH)
 act_generator = act_gen.ImageActivationGenerator(
     mymodel, source_dir, activation_dir, max_examples=100)
 
