@@ -1,23 +1,39 @@
-import numpy as np
+"""
+Copyright 2018 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from scipy.stats import ttest_ind
+import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 
 
 # helper function to output plot and write summary data
 def plot_results(results, random_counterpart=None, random_concepts=None, num_random_exp=100,
                  min_p_val=0.05):
     """Helper function to organize results.
-    When run in a notebook, outputs a matplotlib bar plot of the
-    TCAV scores for all bottlenecks for each concept, replacing the
-    bars with asterisks when the TCAV score is not statistically significant.
+    Output a matplotlib bar plot of the TCAV scores for all bottlenecks for each concept, replacing the bars with asterisks when the TCAV score is not statistically significant.
     If you ran TCAV with a random_counterpart, supply it here, otherwise supply random_concepts.
     If you get unexpected output, make sure you are using the correct keywords.
 
     Args:
       results: dictionary of results from TCAV runs.
-      random_counterpart: name of the random_counterpart used, if it was used.
-      random_concepts: list of random experiments that were run.
+      random_counterpart: name of the random_counterpart used, if it was used. 
+      random_concepts: list of random experiments that were run. 
       num_random_exp: number of random experiments that were run.
       min_p_val: minimum p value for statistical significance
     """
@@ -50,7 +66,8 @@ def plot_results(results, random_counterpart=None, random_concepts=None, num_ran
         if result['bottleneck'] not in result_summary[result['cav_concept']]:
             result_summary[result['cav_concept']][result['bottleneck']] = []
 
-        result_summary[result['cav_concept']][result['bottleneck']].append(result)
+        result_summary[result['cav_concept']
+                       ][result['bottleneck']].append(result)
 
         # store random
         if is_random_concept(result['cav_concept']):
@@ -61,6 +78,7 @@ def plot_results(results, random_counterpart=None, random_concepts=None, num_ran
 
     # to plot, must massage data again
     plot_data = {}
+    plot_concepts = []
 
     # print concepts and classes with indentation
     for concept in result_summary:
@@ -68,15 +86,18 @@ def plot_results(results, random_counterpart=None, random_concepts=None, num_ran
         # if not random
         if not is_random_concept(concept):
             print(" ", "Concept =", concept)
+            plot_concepts.append(concept)
 
             for bottleneck in result_summary[concept]:
-                i_ups = [item['i_up'] for item in result_summary[concept][bottleneck]]
+                i_ups = [item['i_up']
+                         for item in result_summary[concept][bottleneck]]
 
                 # Calculate statistical significance
                 _, p_val = ttest_ind(random_i_ups[bottleneck], i_ups)
 
                 if bottleneck not in plot_data:
-                    plot_data[bottleneck] = {'bn_vals': [], 'bn_stds': [], 'significant': []}
+                    plot_data[bottleneck] = {
+                        'bn_vals': [], 'bn_stds': [], 'significant': []}
 
                 if p_val > min_p_val:
                     # statistically insignificant
@@ -87,15 +108,14 @@ def plot_results(results, random_counterpart=None, random_concepts=None, num_ran
                 else:
                     plot_data[bottleneck]['bn_vals'].append(np.mean(i_ups))
                     plot_data[bottleneck]['bn_stds'].append(np.std(i_ups))
-                    #                 plot_data[bottleneck]['significant'].append(p_val <= min_p_val)
                     plot_data[bottleneck]['significant'].append(True)
 
                 print(3 * " ", "Bottleneck =", ("%s. TCAV Score = %.2f (+- %.2f), "
                                                 "random was %.2f (+- %.2f). p-val = %.3f (%s)") % (
-                          bottleneck, np.mean(i_ups), np.std(i_ups),
-                          np.mean(random_i_ups[bottleneck]),
-                          np.std(random_i_ups[bottleneck]), p_val,
-                          "not significant" if p_val > min_p_val else "significant"))
+                    bottleneck, np.mean(i_ups), np.std(i_ups),
+                    np.mean(random_i_ups[bottleneck]),
+                    np.std(random_i_ups[bottleneck]), p_val,
+                    "not significant" if p_val > min_p_val else "significant"))
 
     # subtract number of random experiments
     if random_counterpart:
@@ -127,16 +147,13 @@ def plot_results(results, random_counterpart=None, random_concepts=None, num_ran
                 ax.text(index[j] + i * bar_width - 0.1, 0.01, "*",
                         fontdict={'weight': 'bold', 'size': 16,
                                   'color': bar.patches[0].get_facecolor()})
-
+    print(plot_data)
     # set properties
     ax.set_title('TCAV Scores for each concept and bottleneck')
     ax.set_ylabel('TCAV Score')
-    ax.set_ylim(0., 1.1)
     ax.set_xticks(index + num_bottlenecks * bar_width / 2)
-    ax.set_xticklabels([concept for concept in result_summary if not is_random_concept(concept)])
-    handles, labels = ax.get_legend_handles_labels()
-    handles.append(Line2D([0], [0], marker='*', color='w', markerfacecolor='red', markersize=13))
-    labels.append('insignificant (p_val > {})'.format(min_p_val))
-    ax.legend(handles, labels)
-    fig.tight_layout()
-    plt.show()
+    ax.set_xticklabels(plot_concepts)
+    ax.legend()
+    # fig.tight_layout()
+    fig.savefig('./results.jpg', bbox_inches='tight')
+    # plt.show()

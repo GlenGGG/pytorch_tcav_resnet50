@@ -13,14 +13,12 @@ def process_what_to_run_expand(pairs_to_test,
                                num_random_exp=100,
                                random_concepts=None):
     """Get concept vs. random or random vs. random pairs to run.
-
       Given set of target, list of concept pairs, expand them to include
        random pairs. For instance [(t1, [c1, c2])...] becomes
        [(t1, [c1, random1],
         (t1, [c1, random2],...
         (t1, [c2, random1],
         (t1, [c2, random2],...]
-
     Args:
       pairs_to_test: [(target, [concept1, concept2,...]),...]
       random_counterpart: random concept that will be compared to the concept.
@@ -28,7 +26,6 @@ def process_what_to_run_expand(pairs_to_test,
       random_concepts: A list of names of random concepts for the random
                        experiments to draw from. Optional, if not provided, the
                        names will be random500_{i} for i in num_random_exp.
-
     Returns:
       all_concepts: unique set of targets/concepts
       new_pairs_to_test: expanded
@@ -57,18 +54,17 @@ def process_what_to_run_expand(pairs_to_test,
             tf.logging.info('PAIR NOT PROCCESSED')
         new_pairs_to_test.extend(new_pairs_to_test_t)
 
-    all_concepts = list(set(flatten([cs + [tc] for tc, cs in new_pairs_to_test])))
+    all_concepts = list(
+        set(flatten([cs + [tc] for tc, cs in new_pairs_to_test])))
 
     return all_concepts, new_pairs_to_test
 
 
 def process_what_to_run_concepts(pairs_to_test):
     """Process concepts and pairs to test.
-
     Args:
       pairs_to_test: a list of concepts to be tested and a target (e.g,
        [ ("target1",  ["concept1", "concept2", "concept3"]),...])
-
     Returns:
       return pairs to test:
          target1, concept1
@@ -77,7 +73,6 @@ def process_what_to_run_concepts(pairs_to_test):
          target2, concept1
          target2, concept2
          ...
-
     """
 
     pairs_for_sstesting = []
@@ -90,12 +85,10 @@ def process_what_to_run_concepts(pairs_to_test):
 
 def process_what_to_run_randoms(pairs_to_test, random_counterpart):
     """Process concepts and pairs to test.
-
     Args:
       pairs_to_test: a list of concepts to be tested and a target (e.g,
        [ ("target1",  ["concept1", "concept2", "concept3"]),...])
       random_counterpart: a random concept that will be compared to the concept.
-
     Returns:
       return pairs to test:
             target1, random_counterpart,
@@ -116,7 +109,6 @@ def print_results(results, random_counterpart=None, random_concepts=None, num_ra
     """Helper function to organize results.
     If you ran TCAV with a random_counterpart, supply it here, otherwise supply random_concepts.
     If you get unexpected output, make sure you are using the correct keywords.
-
     Args:
       results: dictionary of results from TCAV runs.
       random_counterpart: name of the random_counterpart used, if it was used.
@@ -153,7 +145,8 @@ def print_results(results, random_counterpart=None, random_concepts=None, num_ra
         if result['bottleneck'] not in result_summary[result['cav_concept']]:
             result_summary[result['cav_concept']][result['bottleneck']] = []
 
-        result_summary[result['cav_concept']][result['bottleneck']].append(result)
+        result_summary[result['cav_concept']
+                       ][result['bottleneck']].append(result)
 
         # store random
         if is_random_concept(result['cav_concept']):
@@ -170,7 +163,8 @@ def print_results(results, random_counterpart=None, random_concepts=None, num_ra
             print(" ", "Concept =", concept)
 
             for bottleneck in result_summary[concept]:
-                i_ups = [item['i_up'] for item in result_summary[concept][bottleneck]]
+                i_ups = [item['i_up']
+                         for item in result_summary[concept][bottleneck]]
 
                 # Calculate statistical significance
                 _, p_val = ttest_ind(random_i_ups[bottleneck], i_ups)
@@ -184,5 +178,5 @@ def print_results(results, random_counterpart=None, random_concepts=None, num_ra
 
 
 def make_dir_if_not_exists(directory):
-    if not tf.gfile.Exists(directory):
-        tf.gfile.MakeDirs(directory)
+    if not tf.io.gfile.exists(directory):
+        tf.io.gfile.makedirs(directory)

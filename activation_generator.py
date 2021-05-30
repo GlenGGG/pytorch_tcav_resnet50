@@ -45,8 +45,8 @@ class ActivationGeneratorBase(ActivationGeneratorInterface):
 
     def process_and_load_activations(self, bottleneck_names, concepts):
         acts = {}
-        if self.acts_dir and not tf.gfile.Exists(self.acts_dir):
-            tf.gfile.MakeDirs(self.acts_dir)
+        if self.acts_dir and not tf.io.gfile.exists(self.acts_dir):
+            tf.io.gfile.makedirs(self.acts_dir)
 
         for concept in concepts:
             if concept not in acts:
@@ -54,18 +54,18 @@ class ActivationGeneratorBase(ActivationGeneratorInterface):
             for bottleneck_name in bottleneck_names:
                 acts_path = os.path.join(self.acts_dir, 'acts_{}_{}'.format(
                     concept, bottleneck_name)) if self.acts_dir else None
-                if acts_path and tf.gfile.Exists(acts_path):
-                    with tf.gfile.Open(acts_path, 'rb') as f:
+                if acts_path and tf.io.gfile.exists(acts_path):
+                    with tf.io.gfile.GFile(acts_path, 'rb') as f:
                         acts[concept][bottleneck_name] = np.load(f).squeeze()
-                        tf.logging.info('Loaded {} shape {}'.format(
+                        tf.compat.v1.logging.info('Loaded {} shape {}'.format(
                             acts_path, acts[concept][bottleneck_name].shape))
                 else:
                     acts[concept][bottleneck_name] = self.get_activations_for_concept(
                         concept, bottleneck_name)
                     if acts_path:
-                        tf.logging.info('{} does not exist, Making one...'.format(
+                        tf.compat.v1.logging.info('{} does not exist, Making one...'.format(
                             acts_path))
-                        with tf.gfile.Open(acts_path, 'w') as f:
+                        with tf.io.gfile.GFile(acts_path, 'w') as f:
                             np.save(f, acts[concept][bottleneck_name], allow_pickle=False)
         return acts
 
@@ -81,30 +81,27 @@ class ImageActivationGenerator(ActivationGeneratorBase):
     def get_examples_for_concept(self, concept):
         concept_dir = os.path.join(self.source_dir, concept)
         img_paths = [os.path.join(concept_dir, d)
-                     for d in tf.gfile.ListDirectory(concept_dir)]
+                     for d in tf.io.gfile.listdir(concept_dir)]
         imgs = self.load_images_from_files(img_paths, self.max_examples,
                                            shape=self.model.get_image_shape()[:2])
         return imgs
 
     def load_image_from_file(self, filename, shape):
         """Given a filename, try to open the file. If failed, return None.
-
         Args:
           filename: location of the image file
           shape: the shape of the image file to be scaled
-
         Returns:
           the image if succeeds, None if fails.
-
         Rasies:
           exception if the image was not the right shape.
         """
-        if not tf.gfile.Exists(filename):
-            tf.logging.error('Cannot find file: {}'.format(filename))
+        if not tf.io.gfile.exists(filename):
+            tf.compat.v1.logging.error('Cannot find file: {}'.format(filename))
             return None
         try:
             # ensure image has no transparency channel
-            img = np.array(PIL.Image.open(tf.gfile.Open(filename, 'rb')).convert(
+            img = np.array(PIL.Image.open(tf.io.gfile.GFile(filename, 'rb')).convert(
                 'RGB').resize(shape, PIL.Image.BILINEAR))
             # Normalize pixel values to between 0 and 1.
             img = np.float32(img) / 255.0
@@ -114,7 +111,7 @@ class ImageActivationGenerator(ActivationGeneratorBase):
                 return img
 
         except Exception as e:
-            tf.logging.info(e)
+            tf.compat.v1.logging.info(e)
             return None
         return img
 
@@ -123,7 +120,6 @@ class ImageActivationGenerator(ActivationGeneratorBase):
                                shape=(299, 299),
                                num_workers=10):
         """Return image arrays from filenames.
-
         Args:
           filenames: locations of image files.
           max_imgs: maximum number of images from filenames.
@@ -131,10 +127,8 @@ class ImageActivationGenerator(ActivationGeneratorBase):
           run_parallel: get images in parallel or not
           shape: desired shape of the image
           num_workers: number of workers in parallelization.
-
         Returns:
           image arrays
-
         """
         imgs = []
         # First shuffle a copy of the filenames.

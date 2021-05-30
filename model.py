@@ -8,7 +8,7 @@ import tensorflow as tf
 import gc
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
@@ -89,7 +89,7 @@ class PublicImageModelWrapper(ImageModelWrapper):
 
     def __init__(self, labels_path, image_shape):
         super(PublicImageModelWrapper, self).__init__(image_shape=image_shape)
-        self.labels = tf.gfile.Open(labels_path).read().splitlines()
+        self.labels = tf.io.gfile.GFile(labels_path).read().splitlines()
 
     def label_to_id(self, label):
         return self.labels.index(label)
@@ -140,7 +140,8 @@ class InceptionV3Wrapper(PublicImageModelWrapper):
         image_shape = [299, 299, 3]
         super(InceptionV3Wrapper, self).__init__(image_shape=image_shape,
                                                  labels_path=labels_path)
-        self.model = torchvision.models.inception_v3(pretrained=True, transform_input=True)
+        # self.model = torchvision.models.inception_v3(pretrained=True, transform_input=True)
+        self.model = torchvision.models.resnet18(pretrained=True)
         self.model_name = 'InceptionV3_public'
 
     def forward(self, x):
