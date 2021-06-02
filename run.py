@@ -18,13 +18,14 @@ import tensorflow as tf
 # bottlenecks: list of bottleneck names (intermediate layers in your model) that you want to use for TCAV. These names are defined in the model wrapper below.
 
 source_dir = "./image_net_subsets/"
+# source_dir = "./YOUR_FOLDER/"
 
 working_dir = './tcav_class_test'
 activation_dir = working_dir + '/activations/'
 cav_dir = working_dir + '/cavs/'
 # bottlenecks = ['Mixed_5d', 'Conv2d_2a_3x3']
 # bottlenecks = ['Conv2d_2a_3x3']
-bottlenecks = ['layer2','layer4']
+bottlenecks = ['layer1','layer3']
 # bottlenecks = ['layer4']
 
 utils.make_dir_if_not_exists(working_dir)
@@ -32,7 +33,7 @@ utils.make_dir_if_not_exists(activation_dir)
 utils.make_dir_if_not_exists(cav_dir)
 
 # this is a regularizer penalty parameter for linear classifier to get CAVs.
-alphas = [0.1]
+alphas = [0.0001]
 
 target = 'zebra'
 concepts = ["dotted", "striped", "zigzagged"]
@@ -42,15 +43,15 @@ LABEL_PATH = './imagenet_comp_graph_label_strings.txt'
 # mymodel = model.InceptionV3Wrapper(LABEL_PATH)
 mymodel = model.ResNet50Wrapper(LABEL_PATH)
 act_generator = act_gen.ImageActivationGenerator(
-    mymodel, source_dir, activation_dir, max_examples=100)
+    mymodel, source_dir, activation_dir, max_examples=40)
 
 # ---------------------------------------------------------------------------------------------------------------
 # num_random_exp: number of experiments to confirm meaningful concept direction. TCAV will search for this many folders named random500_0, random500_1, etc. You can alternatively set the random_concepts keyword to be a list of folders of random concepts. Run at least 10-20 for meaningful tests.
 
 # random_counterpart: as well as the above, you can optionally supply a single folder with random images as the "positive set" for statistical testing. Reduces computation time at the cost of less reliable random TCAV scores.
 
-tf.compat.v1.logging.set_verbosity(0)
-num_random_exp = 2  # folders (random500_0, random500_1)
+tf.compat.v1.logging.set_verbosity(20)
+num_random_exp = 10  # folders (random500_0, random500_1)
 
 mytcav = tcav.TCAV(target,
                    concepts,
@@ -62,4 +63,6 @@ mytcav = tcav.TCAV(target,
                    
 print('Loading mytcav')
 results = mytcav.run()
+for result in results:
+    print(result["cav_accuracies"])
 utils_plot.plot_results(results, num_random_exp=num_random_exp)
