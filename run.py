@@ -5,6 +5,7 @@ import utils as utils
 import utils_plot as utils_plot  # utils_plot requires matplotlib
 import os
 import torch
+import pickle
 import activation_generator as act_gen
 import tensorflow as tf
 
@@ -17,7 +18,7 @@ import tensorflow as tf
 
 # bottlenecks: list of bottleneck names (intermediate layers in your model) that you want to use for TCAV. These names are defined in the model wrapper below.
 
-source_dir = "./image_net_subsets/"
+source_dir = "/home/computer/WBH/bmvc/CUB_200_2011/concepts/"
 # source_dir = "./YOUR_FOLDER/"
 
 working_dir = './tcav_class_test'
@@ -35,15 +36,17 @@ utils.make_dir_if_not_exists(cav_dir)
 # this is a regularizer penalty parameter for linear classifier to get CAVs.
 alphas = [0.0001]
 
-target = 'zebra'
-concepts = ["dotted", "striped", "zigzagged"]
+target = '001.Black_footed_Albatross'
+concepts = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
+# concepts = ["1", "2"]
 # random_counterpart = 'random500_1'
-LABEL_PATH = './imagenet_comp_graph_label_strings.txt'
+# LABEL_PATH = './imagenet_comp_graph_label_strings.txt'
+LABEL_PATH = './cub_200_2011_labels.txt'
 
 # mymodel = model.InceptionV3Wrapper(LABEL_PATH)
 mymodel = model.ResNet50Wrapper(LABEL_PATH)
 act_generator = act_gen.ImageActivationGenerator(
-    mymodel, source_dir, activation_dir, max_examples=40)
+    mymodel, source_dir, activation_dir, max_examples=50)
 
 # ---------------------------------------------------------------------------------------------------------------
 # num_random_exp: number of experiments to confirm meaningful concept direction. TCAV will search for this many folders named random500_0, random500_1, etc. You can alternatively set the random_concepts keyword to be a list of folders of random concepts. Run at least 10-20 for meaningful tests.
@@ -51,7 +54,7 @@ act_generator = act_gen.ImageActivationGenerator(
 # random_counterpart: as well as the above, you can optionally supply a single folder with random images as the "positive set" for statistical testing. Reduces computation time at the cost of less reliable random TCAV scores.
 
 tf.compat.v1.logging.set_verbosity(20)
-num_random_exp = 10  # folders (random500_0, random500_1)
+num_random_exp = 100  # folders (random500_0, random500_1)
 
 mytcav = tcav.TCAV(target,
                    concepts,
@@ -66,3 +69,6 @@ results = mytcav.run()
 for result in results:
     print(result["cav_accuracies"])
 utils_plot.plot_results(results, num_random_exp=num_random_exp)
+
+with open('saved_results.pkl','wb') as f:
+    pickle.dump(results,f)
