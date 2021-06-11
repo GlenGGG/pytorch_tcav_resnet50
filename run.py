@@ -26,7 +26,7 @@ activation_dir = working_dir + "/activations/"
 cav_dir = working_dir + "/cavs/"
 # bottlenecks = ['Mixed_5d', 'Conv2d_2a_3x3']
 # bottlenecks = ['Conv2d_2a_3x3']
-bottlenecks = ["layer3"]
+bottlenecks = ["layer1","layer3"]
 # bottlenecks = ['layer4']
 
 utils.make_dir_if_not_exists(working_dir)
@@ -46,9 +46,9 @@ targets = tf.io.gfile.GFile(LABEL_PATH).read().splitlines()
 print(targets)
 
 # mymodel = model.InceptionV3Wrapper(LABEL_PATH)
-mymodel = model.CUBResNet50Wrapper(LABEL_PATH)
+mymodel = model.CUBResNet50Wrapper(LABEL_PATH, "./84.60_best_model.tar")
 act_generator = act_gen.ImageActivationGenerator(
-    mymodel, source_dir, activation_dir, max_examples=50
+    mymodel, source_dir, activation_dir, max_examples=16
 )
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -57,7 +57,7 @@ act_generator = act_gen.ImageActivationGenerator(
 # random_counterpart: as well as the above, you can optionally supply a single folder with random images as the "positive set" for statistical testing. Reduces computation time at the cost of less reliable random TCAV scores.
 
 tf.compat.v1.logging.set_verbosity(20)
-num_random_exp = 100  # folders (random500_0, random500_1)
+num_random_exp = 2  # folders (random500_0, random500_1)
 
 for target in targets:
     if target in target_exclude:

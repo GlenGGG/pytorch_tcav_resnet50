@@ -233,7 +233,7 @@ class CUBResNet50Wrapper(PublicImageModelWrapper):
     def __init__(self, labels_path, model_dict=None):
         image_size = 448
         image_shape = [int(image_size/0.875), int(image_size/0.875), 3]
-        super(ResNet50Wrapper, self).__init__(
+        super(CUBResNet50Wrapper, self).__init__(
             image_shape=image_shape, labels_path=labels_path
         )
         if model_dict:
@@ -264,6 +264,6 @@ class CUBResNet50Wrapper(PublicImageModelWrapper):
         self.model.fc = nn.Linear(self.model.fc.in_features, 200)
         dict = torch.load(model_dict)["state"]
         new_dict = {}
-        for key, val in dict:
+        for key, val in dict.items():
             new_dict[key.replace("res50.", "")] = val
         self.model.load_state_dict(new_dict)
