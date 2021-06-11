@@ -7,4 +7,4 @@
 *._*
 /YOUR_FOLDER/
 nohup.out
-*results.pkl
+./*results.pkl

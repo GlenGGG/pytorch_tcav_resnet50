@@ -36,31 +36,13 @@ utils.make_dir_if_not_exists(cav_dir)
 # this is a regularizer penalty parameter for linear classifier to get CAVs.
 alphas = [0.0001]
 
-concepts = [
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "10",
-    "11",
-    "12",
-    "13",
-    "14",
-    "15",
-]
-# concepts = ["dotted", "striped"]
+concepts = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
+# concepts = ["1", "2"]
 # random_counterpart = 'random500_1'
 # LABEL_PATH = './imagenet_comp_graph_label_strings.txt'
-LABEL_PATH = "./cub_200_2011_labels.txt"
-
-target_exclude = ["001.Black_footed_Albatross"]
+LABEL_PATH = './cub_200_2011_labels.txt'
+target_exclude = ['001.Black_footed_Albatross']
 targets = tf.io.gfile.GFile(LABEL_PATH).read().splitlines()
-# targets = ['zebra']
 print(targets)
 
 # mymodel = model.InceptionV3Wrapper(LABEL_PATH)
@@ -75,30 +57,25 @@ act_generator = act_gen.ImageActivationGenerator(
 # random_counterpart: as well as the above, you can optionally supply a single folder with random images as the "positive set" for statistical testing. Reduces computation time at the cost of less reliable random TCAV scores.
 
 tf.compat.v1.logging.set_verbosity(20)
-num_random_exp = 10  # folders (random500_0, random500_1)
+num_random_exp = 100  # folders (random500_0, random500_1)
 
 for target in targets:
     if target in target_exclude:
-        continue
-    mytcav = tcav.TCAV(
-        target,
-        concepts,
-        bottlenecks,
-        act_generator,
-        alphas,
-        cav_dir=cav_dir,
-        num_random_exp=num_random_exp,
-    )
+	    continue
 
-    print("Loading mytcav")
+    mytcav = tcav.TCAV(target,
+                       concepts,
+                       bottlenecks,
+                       act_generator,
+                       alphas,
+                       cav_dir=cav_dir,
+                       num_random_exp=num_random_exp)
+                       
+    print('Loading mytcav')
     results = mytcav.run()
     for result in results:
         print(result["cav_accuracies"])
-    utils_plot.plot_results(
-        results,
-        num_random_exp=num_random_exp,
-        save_name=target + "_results.jpg",
-    )
-
-    with open(target + "_saved_results.pkl", "wb") as f:
-        pickle.dump(results, f)
+    utils_plot.plot_results(results, num_random_exp=num_random_exp, save_name=target+"results.jpg")
+    
+    with open(target+'_saved_results.pkl','wb') as f:
+        pickle.dump(results,f)

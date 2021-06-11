@@ -24,8 +24,12 @@ import matplotlib.pyplot as plt
 
 # helper function to output plot and write summary data
 def plot_results(results, random_counterpart=None, random_concepts=None, num_random_exp=100,
+<<<<<<< Updated upstream
                  min_p_val=0.05,
                  save_name='./results.jpg'):
+=======
+                 min_p_val=0.05, save_name="./results.jpg"):
+>>>>>>> Stashed changes
     """Helper function to organize results.
     Output a matplotlib bar plot of the TCAV scores for all bottlenecks for each concept, replacing the bars with asterisks when the TCAV score is not statistically significant.
     If you ran TCAV with a random_counterpart, supply it here, otherwise supply random_concepts.
@@ -157,5 +161,8 @@ def plot_results(results, random_counterpart=None, random_concepts=None, num_ran
     ax.legend()
     # fig.tight_layout()
     fig.savefig(save_name, bbox_inches='tight')
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
     # plt.show()
