@@ -46,7 +46,7 @@ targets = tf.io.gfile.GFile(LABEL_PATH).read().splitlines()
 print(targets)
 
 # mymodel = model.InceptionV3Wrapper(LABEL_PATH)
-mymodel = model.ResNet50Wrapper(LABEL_PATH)
+mymodel = model.CUBResNet50Wrapper(LABEL_PATH)
 act_generator = act_gen.ImageActivationGenerator(
     mymodel, source_dir, activation_dir, max_examples=50
 )

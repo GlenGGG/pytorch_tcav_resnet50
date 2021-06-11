@@ -9,6 +9,7 @@ import tensorflow as tf
 
 class ActivationGeneratorInterface(object):
     """Interface for an activation generator for a model"""
+
     __metaclass__ = ABCMeta
 
     @abstractmethod
@@ -52,21 +53,38 @@ class ActivationGeneratorBase(ActivationGeneratorInterface):
             if concept not in acts:
                 acts[concept] = {}
             for bottleneck_name in bottleneck_names:
-                acts_path = os.path.join(self.acts_dir, 'acts_{}_{}'.format(
-                    concept, bottleneck_name)) if self.acts_dir else None
+                acts_path = (
+                    os.path.join(
+                        self.acts_dir,
+                        "acts_{}_{}".format(concept, bottleneck_name),
+                    )
+                    if self.acts_dir
+                    else None
+                )
                 if acts_path and tf.io.gfile.exists(acts_path):
-                    with tf.io.gfile.GFile(acts_path, 'rb') as f:
+                    with tf.io.gfile.GFile(acts_path, "rb") as f:
                         acts[concept][bottleneck_name] = np.load(f).squeeze()
-                        tf.compat.v1.logging.info('Loaded {} shape {}'.format(
-                            acts_path, acts[concept][bottleneck_name].shape))
+                        tf.compat.v1.logging.info(
+                            "Loaded {} shape {}".format(
+                                acts_path, acts[concept][bottleneck_name].shape
+                            )
+                        )
                 else:
-                    acts[concept][bottleneck_name] = self.get_activations_for_concept(
-                        concept, bottleneck_name)
+                    acts[concept][
+                        bottleneck_name
+                    ] = self.get_activations_for_concept(
+                        concept, bottleneck_name
+                    )
                     if acts_path:
-                        tf.compat.v1.logging.info('{} does not exist, Making one...'.format(
-                            acts_path))
-                        with tf.io.gfile.GFile(acts_path, 'w') as f:
-                            np.save(f, acts[concept][bottleneck_name], allow_pickle=False)
+                        tf.compat.v1.logging.info(
+                            "{} does not exist, Making one...".format(acts_path)
+                        )
+                        with tf.io.gfile.GFile(acts_path, "w") as f:
+                            np.save(
+                                f,
+                                acts[concept][bottleneck_name],
+                                allow_pickle=False,
+                            )
         return acts
 
 
@@ -76,14 +94,18 @@ class ImageActivationGenerator(ActivationGeneratorBase):
     def __init__(self, model, source_dir, acts_dir, max_examples=10):
         self.source_dir = source_dir
         super(ImageActivationGenerator, self).__init__(
-            model, acts_dir, max_examples)
+            model, acts_dir, max_examples
+        )
 
     def get_examples_for_concept(self, concept):
         concept_dir = os.path.join(self.source_dir, concept)
-        img_paths = [os.path.join(concept_dir, d)
-                     for d in tf.io.gfile.listdir(concept_dir)]
-        imgs = self.load_images_from_files(img_paths, self.max_examples,
-                                           shape=self.model.get_image_shape()[:2])
+        img_paths = [
+            os.path.join(concept_dir, d)
+            for d in tf.io.gfile.listdir(concept_dir)
+        ]
+        imgs = self.load_images_from_files(
+            img_paths, self.max_examples, shape=self.model.get_image_shape()[:2]
+        )
         return imgs
 
     def load_image_from_file(self, filename, shape):
@@ -97,28 +119,35 @@ class ImageActivationGenerator(ActivationGeneratorBase):
           exception if the image was not the right shape.
         """
         if not tf.io.gfile.exists(filename):
-            tf.compat.v1.logging.error('Cannot find file: {}'.format(filename))
+            tf.compat.v1.logging.error("Cannot find file: {}".format(filename))
             return None
-        try:
-            # ensure image has no transparency channel
-            img = np.array(PIL.Image.open(tf.io.gfile.GFile(filename, 'rb')).convert(
-                'RGB').resize(shape, PIL.Image.BILINEAR))
-            # Normalize pixel values to between 0 and 1.
-            img = np.float32(img) / 255.0
-            if not (len(img.shape) == 3 and img.shape[2] == 3):
-                return None
-            else:
-                return img
+        # try:
+        # ensure image has no transparency channel
+        img = np.array(
+            PIL.Image.open(tf.io.gfile.GFile(filename, "rb"))
+            .convert("RGB")
+            .resize(shape, PIL.Image.LANCZOS)
+        )
 
-        except Exception as e:
-            tf.compat.v1.logging.info(e)
+        if not (len(img.shape) == 3 and img.shape[2] == 3):
             return None
+        else:
+            return img
+
+        # except Exception as e:
+        #     tf.compat.v1.logging.info(e)
+        #     return None
         return img
 
-    def load_images_from_files(self, filenames, max_imgs=500,
-                               do_shuffle=True, run_parallel=True,
-                               shape=(299, 299),
-                               num_workers=10):
+    def load_images_from_files(
+        self,
+        filenames,
+        max_imgs=500,
+        do_shuffle=True,
+        run_parallel=True,
+        shape=(299, 299),
+        num_workers=10,
+    ):
         """Return image arrays from filenames.
         Args:
           filenames: locations of image files.
@@ -140,17 +169,22 @@ class ImageActivationGenerator(ActivationGeneratorBase):
             pool = multiprocessing.Pool(num_workers)
             imgs = pool.map(
                 lambda filename: self.load_image_from_file(filename, shape),
-                filenames[:max_imgs])
+                filenames[:max_imgs],
+            )
             imgs = [img for img in imgs if img is not None]
             if len(imgs) <= 1:
-                raise ValueError('You must have more than 1 image in each class to run TCAV.')
+                raise ValueError(
+                    "You must have more than 1 image in each class to run TCAV."
+                )
         else:
             for filename in filenames:
                 img = self.load_image_from_file(filename, shape)
                 if img is not None:
                     imgs.append(img)
                 if len(imgs) <= 1:
-                    raise ValueError('You must have more than 1 image in each class to run TCAV.')
+                    raise ValueError(
+                        "You must have more than 1 image in each class to run TCAV."
+                    )
                 elif len(imgs) >= max_imgs:
                     break
 

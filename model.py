@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import torchvision
 import torch.nn.functional as F
 from torchvision import transforms
@@ -9,6 +10,7 @@ import tensorflow as tf
 import gc
 
 import os
+from torchvision.transforms.functional import _is_numpy_image
 
 from torchvision.transforms.transforms import CenterCrop
 
@@ -225,3 +227,43 @@ class ResNet50Wrapper(PublicImageModelWrapper):
 
     def get_cutted_model(self, bottleneck):
         return ResNet50_cutted(self.model, bottleneck)
+
+
+class CUBResNet50Wrapper(PublicImageModelWrapper):
+    def __init__(self, labels_path, model_dict=None):
+        image_size = 448
+        image_shape = [int(image_size/0.875), int(image_size/0.875), 3]
+        super(ResNet50Wrapper, self).__init__(
+            image_shape=image_shape, labels_path=labels_path
+        )
+        if model_dict:
+            self.load_model(model_dict)
+        else:
+            self.model = torchvision.models.resnet50(pretrained=True)
+        self.model_name = "CUBResNet50_public"
+        self.transform = transforms.Compose(
+            [
+                # transforms.Resize(int(image_size / 0.875)),
+                transforms.CenterCrop(image_size),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)
+                ),
+            ]
+        )
+
+    def forward(self, x):
+        x = self.transform(x)
+        return self.model.forward(x)
+
+    def get_cutted_model(self, bottleneck):
+        return ResNet50_cutted(self.model, bottleneck)
+
+    def load_model(self, model_dict):
+        self.model = torchvision.models.resnet50()
+        self.model.fc = nn.Linear(self.model.fc.in_features, 200)
+        dict = torch.load(model_dict)["state"]
+        new_dict = {}
+        for key, val in dict:
+            new_dict[key.replace("res50.", "")] = val
+        self.model.load_state_dict(new_dict)
