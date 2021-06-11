@@ -24,10 +24,13 @@ class ActivationGeneratorInterface(object):
 class ActivationGeneratorBase(ActivationGeneratorInterface):
     """Basic abstract activation generator for a model"""
 
-    def __init__(self, model, acts_dir, max_examples=500):
+    def __init__(self, model, acts_dir, max_examples=500, sample_num=5):
         self.model = model
         self.acts_dir = acts_dir
         self.max_examples = max_examples
+        self.sample_num = sample_num
+        if self.sample_num < 1:
+            tf.compat.v1.logging.info("sample_num must be >= 1")
 
     def get_model(self):
         return self.model
@@ -44,7 +47,7 @@ class ActivationGeneratorBase(ActivationGeneratorInterface):
         acts = self.model.run_examples(examples, bottleneck)
         return self.model.reshape_activations(acts).squeeze()
 
-    def process_and_load_activations(self, bottleneck_names, concepts):
+    def process_and_load_activations(self, bottleneck_names, concepts, targets=[]):
         acts = {}
         if self.acts_dir and not tf.io.gfile.exists(self.acts_dir):
             tf.io.gfile.makedirs(self.acts_dir)
@@ -75,6 +78,17 @@ class ActivationGeneratorBase(ActivationGeneratorInterface):
                     ] = self.get_activations_for_concept(
                         concept, bottleneck_name
                     )
+                    if self.sample_num > 1 and concept not in targets:
+                        for _ in range(self.sample_num - 1):
+                            acts[concept][bottleneck_name] = np.concatenate(
+                                (
+                                    acts[concept][bottleneck_name],
+                                    self.get_activations_for_concept(
+                                        concept, bottleneck_name
+                                    ),
+                                ),
+                                axis=0,
+                            )
                     if acts_path:
                         tf.compat.v1.logging.info(
                             "{} does not exist, Making one...".format(acts_path)
@@ -91,7 +105,9 @@ class ActivationGeneratorBase(ActivationGeneratorInterface):
 class ImageActivationGenerator(ActivationGeneratorBase):
     """Activation generator for a basic image model"""
 
-    def __init__(self, model, source_dir, acts_dir, max_examples=10):
+    def __init__(
+        self, model, source_dir, acts_dir, max_examples=10, sample_num=5
+    ):
         self.source_dir = source_dir
         super(ImageActivationGenerator, self).__init__(
             model, acts_dir, max_examples

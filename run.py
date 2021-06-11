@@ -18,12 +18,29 @@ import tensorflow as tf
 
 # bottlenecks: list of bottleneck names (intermediate layers in your model) that you want to use for TCAV. These names are defined in the model wrapper below.
 
-source_dir = "/home/computer/WBH/bmvc/CUB_200_2011/concepts/"
-# source_dir = "./image_net_subsets"
 
 working_dir = "./tcav_class_test"
 activation_dir = working_dir + "/activations/"
 cav_dir = working_dir + "/cavs/"
+dataset="CUB"
+
+if dataset == "CUB":
+    source_dir = "/home/computer/WBH/bmvc/CUB_200_2011/concepts/"
+    # concepts = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
+    concepts = ["1", "2"]
+    LABEL_PATH = './cub_200_2011_labels.txt'
+    target_exclude = ['001.Black_footed_Albatross']
+    targets = tf.io.gfile.GFile(LABEL_PATH).read().splitlines()
+    mymodel = model.CUBResNet50Wrapper(LABEL_PATH, "./84.60_best_model.tar")
+else:
+    source_dir = "./image_net_subsets"
+    concepts = ["dotted", "striped"]
+    LABEL_PATH = './imagenet_comp_graph_label_strings.txt'
+    target_exclude = ['001.Black_footed_Albatross']
+    targets = ['zebra']
+    # mymodel = model.InceptionV3Wrapper(LABEL_PATH)
+    mymodel = model.ResNet50Wrapper(LABEL_PATH)
+
 # bottlenecks = ['Mixed_5d', 'Conv2d_2a_3x3']
 # bottlenecks = ['Conv2d_2a_3x3']
 bottlenecks = ["layer1","layer3"]
@@ -34,21 +51,13 @@ utils.make_dir_if_not_exists(activation_dir)
 utils.make_dir_if_not_exists(cav_dir)
 
 # this is a regularizer penalty parameter for linear classifier to get CAVs.
-alphas = [0.0001]
+alphas = [0.01]
 
-concepts = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
-# concepts = ["1", "2"]
 # random_counterpart = 'random500_1'
-# LABEL_PATH = './imagenet_comp_graph_label_strings.txt'
-LABEL_PATH = './cub_200_2011_labels.txt'
-target_exclude = ['001.Black_footed_Albatross']
-targets = tf.io.gfile.GFile(LABEL_PATH).read().splitlines()
 print(targets)
 
-# mymodel = model.InceptionV3Wrapper(LABEL_PATH)
-mymodel = model.CUBResNet50Wrapper(LABEL_PATH, "./84.60_best_model.tar")
 act_generator = act_gen.ImageActivationGenerator(
-    mymodel, source_dir, activation_dir, max_examples=16
+    mymodel, source_dir, activation_dir, max_examples=40
 )
 
 # ---------------------------------------------------------------------------------------------------------------
