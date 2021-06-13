@@ -22,16 +22,16 @@ import tensorflow as tf
 working_dir = "./tcav_class_test"
 activation_dir = working_dir + "/activations/"
 cav_dir = working_dir + "/cavs/"
-dataset="imagenet"
+dataset="CUB"
 
 if dataset == "CUB":
     source_dir = "/home/computer/WBH/bmvc/CUB_200_2011/concepts/"
-    # concepts = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
-    concepts = ["1", "2"]
+    concepts = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
+    # concepts = ["1", "2"]
     LABEL_PATH = './cub_200_2011_labels.txt'
     target_exclude = ['001.Black_footed_Albatross']
     targets = tf.io.gfile.GFile(LABEL_PATH).read().splitlines()
-    mymodel = model.CUBResNet50Wrapper(LABEL_PATH, "./84.60_best_model.tar")
+    mymodel = model.CUBResNet50Wrapper(LABEL_PATH, "./82.12_best_model.tar")
 else:
     source_dir = "./image_net_subsets"
     concepts = ["dotted", "striped"]
@@ -43,7 +43,7 @@ else:
 
 # bottlenecks = ['Mixed_5d', 'Conv2d_2a_3x3']
 # bottlenecks = ['Conv2d_2a_3x3']
-bottlenecks = ["layer4","layer3"]
+bottlenecks = ["layer3"]
 # bottlenecks = ['layer4']
 
 utils.make_dir_if_not_exists(working_dir)
@@ -66,11 +66,11 @@ act_generator = act_gen.ImageActivationGenerator(
 # random_counterpart: as well as the above, you can optionally supply a single folder with random images as the "positive set" for statistical testing. Reduces computation time at the cost of less reliable random TCAV scores.
 
 tf.compat.v1.logging.set_verbosity(20)
-num_random_exp = 2  # folders (random500_0, random500_1)
+num_random_exp = 100  # folders (random500_0, random500_1)
 
 for target in targets:
     if target in target_exclude:
-	    continue
+        continue
 
     mytcav = tcav.TCAV(target,
                        concepts,
@@ -84,7 +84,7 @@ for target in targets:
     results = mytcav.run()
     for result in results:
         print(result["cav_accuracies"])
-    utils_plot.plot_results(results, num_random_exp=num_random_exp, save_name=target+"results.jpg")
+    utils_plot.plot_results(results, num_random_exp=num_random_exp, save_name=target+"_results.jpg")
     
     with open(target+'_saved_results.pkl','wb') as f:
         pickle.dump(results,f)

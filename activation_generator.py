@@ -165,7 +165,8 @@ class ImageActivationGenerator(ActivationGeneratorBase):
         image = PIL.Image.open(tf.io.gfile.GFile(filename, "rb")).convert("RGB")
         img = transform(image)
 
-        if not (len(img.shape) == 3 and img.shape[2] == 3):
+        if not (len(img.shape) == 3 and img.shape[0] == 3):
+            tf.compat.v1.logging.error("wrong shape: {}, shape is : {}".format(filename, img.shape))
             return None
         else:
             return img
@@ -209,6 +210,7 @@ class ImageActivationGenerator(ActivationGeneratorBase):
                 lambda filename: self.load_image_from_file(filename, shape),
                 filenames[:max_imgs],
             )
+            # print(img_pool)
             for img in img_pool:
                 if img is not None:
                     # imgs.append(img)

@@ -74,7 +74,7 @@ class ModelWrapper(object):
         if not ready_input:
             inputs = torch.FloatTensor(examples).permute(0, 3, 1, 2).to(device)
         else:
-            inputs = examples
+            inputs = examples.to(device)
         self.model.eval()
         self.model(inputs)
         acts = bn_activation.detach().cpu().numpy()
