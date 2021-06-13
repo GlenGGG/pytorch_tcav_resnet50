@@ -195,20 +195,26 @@ class ImageActivationGenerator(ActivationGeneratorBase):
         Returns:
           image arrays
         """
+        image_size = shape[0]
         imgs = []
         # First shuffle a copy of the filenames.
         filenames = filenames[:]
         if do_shuffle:
             np.random.shuffle(filenames)
 
+        imgs = torch.empty((0, 3, image_size, image_size))
         if run_parallel:
             pool = multiprocessing.Pool(num_workers)
-            imgs = pool.map(
+            img_pool = pool.map(
                 lambda filename: self.load_image_from_file(filename, shape),
                 filenames[:max_imgs],
             )
-            imgs = [img for img in imgs if img is not None]
-            if len(imgs) <= 1:
+            for img in img_pool:
+                if img is not None:
+                    # imgs.append(img)
+                    img = img.view(1, 3, shape[0], shape[1])
+                    imgs = torch.cat([imgs, img], dim=0)
+            if imgs.shape[0] <= 1:
                 raise ValueError(
                     "You must have more than 1 image in each class to run TCAV."
                 )
