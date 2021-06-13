@@ -57,7 +57,7 @@ class ModelWrapper(object):
     def label_to_id(self, label):
         pass
 
-    def run_examples(self, examples, bottleneck_name):
+    def run_examples(self, examples, bottleneck_name, ready_input=True):
 
         global bn_activation
         bn_activation = None
@@ -71,7 +71,10 @@ class ModelWrapper(object):
         )
 
         self.model.to(device)
-        inputs = torch.FloatTensor(examples).permute(0, 3, 1, 2).to(device)
+        if not ready_input:
+            inputs = torch.FloatTensor(examples).permute(0, 3, 1, 2).to(device)
+        else:
+            inputs = examples
         self.model.eval()
         self.model(inputs)
         acts = bn_activation.detach().cpu().numpy()
@@ -241,19 +244,19 @@ class CUBResNet50Wrapper(PublicImageModelWrapper):
         else:
             self.model = torchvision.models.resnet50(pretrained=True)
         self.model_name = "CUBResNet50_public"
-        self.transform = transforms.Compose(
-            [
-                # transforms.Resize(int(image_size / 0.875)),
-                transforms.CenterCrop(image_size),
-                transforms.ToTensor(),
-                transforms.Normalize(
-                    mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)
-                ),
-            ]
-        )
+        # self.transform = transforms.Compose(
+        #     [
+        #         transforms.Resize(int(image_size / 0.875)),
+        #         transforms.CenterCrop(image_size),
+        #         # transforms.ToTensor(),
+        #         transforms.Normalize(
+        #             mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)
+        #         ),
+        #     ]
+        # )
 
     def forward(self, x):
-        x = self.transform(x)
+        # x = self.transform(x)
         return self.model.forward(x)
 
     def get_cutted_model(self, bottleneck):

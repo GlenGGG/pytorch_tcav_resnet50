@@ -5,6 +5,8 @@ import os.path
 import numpy as np
 import PIL.Image
 import tensorflow as tf
+import torch
+from torchvision import transforms
 
 
 class ActivationGeneratorInterface(object):
@@ -45,9 +47,13 @@ class ActivationGeneratorBase(ActivationGeneratorInterface):
 
     def get_activations_for_examples(self, examples, bottleneck):
         acts = self.model.run_examples(examples, bottleneck)
+        # print("acts.shape: ",acts.shape)
+        # print("reshaped: ",self.model.reshape_activations(acts).squeeze().shape)
         return self.model.reshape_activations(acts).squeeze()
 
-    def process_and_load_activations(self, bottleneck_names, concepts, targets=[]):
+    def process_and_load_activations(
+        self, bottleneck_names, concepts, targets=[]
+    ):
         acts = {}
         if self.acts_dir and not tf.io.gfile.exists(self.acts_dir):
             tf.io.gfile.makedirs(self.acts_dir)
@@ -134,16 +140,30 @@ class ImageActivationGenerator(ActivationGeneratorBase):
         Rasies:
           exception if the image was not the right shape.
         """
+        image_size = shape[0]
+        transform = transforms.Compose(
+            [
+                transforms.Resize(int(image_size / 0.875)),
+                transforms.CenterCrop(image_size),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)
+                ),
+            ]
+        )
+
         if not tf.io.gfile.exists(filename):
             tf.compat.v1.logging.error("Cannot find file: {}".format(filename))
             return None
         # try:
         # ensure image has no transparency channel
-        img = np.array(
-            PIL.Image.open(tf.io.gfile.GFile(filename, "rb"))
-            .convert("RGB")
-            .resize(shape, PIL.Image.LANCZOS)
-        )
+        # img = np.array(
+        #     PIL.Image.open(tf.io.gfile.GFile(filename, "rb"))
+        #     .convert("RGB")
+        #     .resize(shape, PIL.Image.LANCZOS)
+        # )
+        image = PIL.Image.open(tf.io.gfile.GFile(filename, "rb")).convert("RGB")
+        img = transform(image)
 
         if not (len(img.shape) == 3 and img.shape[2] == 3):
             return None
@@ -196,12 +216,21 @@ class ImageActivationGenerator(ActivationGeneratorBase):
             for filename in filenames:
                 img = self.load_image_from_file(filename, shape)
                 if img is not None:
-                    imgs.append(img)
-                if len(imgs) <= 1:
+                    # imgs.append(img)
+                    img = img.view(1, 3, shape[0], shape[1])
+                    imgs = torch.cat([imgs, img], dim=0)
+                if imgs.shape[0] <= 1:
                     raise ValueError(
                         "You must have more than 1 image in each class to run TCAV."
                     )
-                elif len(imgs) >= max_imgs:
+                elif imgs.shape[1] >= max_imgs:
                     break
+                # if len(imgs) <= 1:
+                #     raise ValueError(
+                #         "You must have more than 1 image in each class to run TCAV."
+                #     )
+                # elif len(imgs) >= max_imgs:
+                #     break
 
-        return np.array(imgs)
+        return imgs
+        # return np.array(imgs)

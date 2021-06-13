@@ -22,7 +22,7 @@ import tensorflow as tf
 working_dir = "./tcav_class_test"
 activation_dir = working_dir + "/activations/"
 cav_dir = working_dir + "/cavs/"
-dataset="CUB"
+dataset="imagenet"
 
 if dataset == "CUB":
     source_dir = "/home/computer/WBH/bmvc/CUB_200_2011/concepts/"
@@ -43,7 +43,7 @@ else:
 
 # bottlenecks = ['Mixed_5d', 'Conv2d_2a_3x3']
 # bottlenecks = ['Conv2d_2a_3x3']
-bottlenecks = ["layer1","layer3"]
+bottlenecks = ["layer4","layer3"]
 # bottlenecks = ['layer4']
 
 utils.make_dir_if_not_exists(working_dir)
