@@ -14,7 +14,7 @@ from torchvision.transforms.functional import _is_numpy_image
 
 from torchvision.transforms.transforms import CenterCrop
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
