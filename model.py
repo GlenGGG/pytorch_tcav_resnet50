@@ -235,7 +235,7 @@ class ResNet50Wrapper(PublicImageModelWrapper):
 class CUBResNet50Wrapper(PublicImageModelWrapper):
     def __init__(self, labels_path, model_dict=None):
         image_size = 224
-        image_shape = [int(image_size/0.875), int(image_size/0.875), 3]
+        image_shape = [image_size, image_size, 3]
         super(CUBResNet50Wrapper, self).__init__(
             image_shape=image_shape, labels_path=labels_path
         )

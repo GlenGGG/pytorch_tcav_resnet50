@@ -1,3 +1,5 @@
+import collections
+from typing import OrderedDict
 import torch
 import os
 import sys
@@ -7,7 +9,7 @@ import torchvision
 import random
 from PIL import Image
 
-## constants
+# constants
 CUB_ROOT_DIR = "G://projects/pythonProjects/data/CUB_200_2011"
 IMAGE_DIR = os.path.join(CUB_ROOT_DIR, "CUB_200_2011/images")
 IMAGE_CLASS_DIR = os.path.join(CUB_ROOT_DIR, "CUB_200_2011/classes.txt")
@@ -29,13 +31,14 @@ SENSITIVITY_SAVE_DIR = os.path.join(CUB_ROOT_DIR, "sensitivity/")
 
 VERBOSE = False
 
-def read_file_to_dic(dic, dir, verbose=False):
+
+def read_file_to_dic(dic, dir, verbose=False, val_type=str):
     with open(dir, "r") as f:
         lines = f.readlines()
         for line in lines:
             line = line.strip("\n")
             key, val = line.split(" ", 1)
-            dic[key] = val
+            dic[key] = val_type(val)
             if verbose:
                 print("%s: %s" % (key, dic[key]))
 
@@ -163,24 +166,38 @@ def extract_random(RANDOM_CONCEPT_ROOT_DIR):
             if cnt >= total_images * path_per_img:
                 break
 
-## create sensitivity dir
+
+# create sensitivity dir
 
 if not os.path.exists(SENSITIVITY_SAVE_DIR):
     os.makedirs(SENSITIVITY_SAVE_DIR)
 
-## get image_class
+# get image_class
 image_class = {}
 read_file_to_dic(image_class, IMAGE_CLASS_DIR)
 
-## get image_label
+# get image_label
 image_label = {}
-read_file_to_dic(image_label, IMAGE_LABEL_DIR)
+read_file_to_dic(image_label, IMAGE_LABEL_DIR, val_type=int)
+image_label = collections.OrderedDict(
+    sorted(image_label.items(), key=lambda t: int(t[0]))
+)
+
+image_label_name = image_label.copy()
+for key, val in image_label_name.items():
+    image_label_name[key] = image_class[str(val)]
 
 image_id_dir = {}
 read_file_to_dic(image_id_dir, IMAGE_ID_DIR_DIR)
+image_id_dir = collections.OrderedDict(
+    sorted(image_id_dir.items(), key=lambda t: int(t[0]))
+)
 
 train_test_split = {}
-read_file_to_dic(train_test_split, IMAGE_TRAIN_TEST_SPLIT_DIR)
+read_file_to_dic(train_test_split, IMAGE_TRAIN_TEST_SPLIT_DIR, val_type=int)
+train_test_split = collections.OrderedDict(
+    sorted(train_test_split.items(), key=lambda t: int(t[0]))
+)
 
 parts = {}
 read_file_to_dic(parts, PARTS_DIR)
@@ -209,6 +226,9 @@ with open(PARTS_LOC_DIR, "r") as f:
                         visible,
                     )
                 )
+parts_loc = collections.OrderedDict(
+    sorted(parts_loc.items(), key=lambda t: int(t[0]))
+)
 
 bounding_box = {}
 with open(BOUNDING_BOX_DIR, "r") as f:
@@ -233,6 +253,9 @@ with open(BOUNDING_BOX_DIR, "r") as f:
                     bounding_box[id][3],
                 )
             )
+bounding_box = collections.OrderedDict(
+    sorted(bounding_box.items(), key=lambda t: int(t[0]))
+)
 
 # print("total images: ", len(image_id_dir))
 

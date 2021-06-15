@@ -10,4 +10,5 @@ nohup.out
 *results.pkl
 *best_model.tar
 .vscode
+*.npy
 
