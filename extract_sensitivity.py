@@ -330,7 +330,7 @@ def extract_sensitivity(
                         random_exp_num,
                         cav_dir,
                     )
-        np.save("train_sensitivity.npy", train_sensitivity)
+        np.save("train_sensitivities.npy", train_sensitivity)
 
 
 def validate(namespace, parser):
@@ -373,8 +373,8 @@ if __name__ == "__main__":
     if dataset == "CUB":
         source_dir = extract_utils.CONCEPT_ROOT_DIR
         print(source_dir)
-        # concepts = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
-        concepts = ["3", "4"]
+        concepts = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
+        # concepts = ["3", "4"]
         LABEL_PATH = "./cub_200_2011_labels.txt"
         target_exclude = ["001.Black_footed_Albatross"]
         targets = tf.io.gfile.GFile(LABEL_PATH).read().splitlines()
