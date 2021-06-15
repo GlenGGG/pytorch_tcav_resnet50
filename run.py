@@ -9,6 +9,8 @@ import pickle
 import activation_generator as act_gen
 import tensorflow as tf
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
 # source_dir: where images of concepts, target class and random images (negative samples when learning CAVs) live. Each should be a sub-folder within this directory.
 # Note that random image directories can be in any name. In this example, we are using random500_0, random500_1,.. for an arbitrary reason. You need roughly 50-200 images per concept and target class (10-20 pictures also tend to work, but 200 is pretty safe).
 
@@ -22,22 +24,38 @@ import tensorflow as tf
 working_dir = "./tcav_class_test"
 activation_dir = working_dir + "/activations/"
 cav_dir = working_dir + "/cavs/"
-dataset="CUB"
+dataset = "CUB"
 
 if dataset == "CUB":
     source_dir = "/home/computer/WBH/bmvc/CUB_200_2011/concepts/"
-    concepts = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
+    concepts = [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+    ]
     # concepts = ["1", "2"]
-    LABEL_PATH = './cub_200_2011_labels.txt'
-    target_exclude = ['001.Black_footed_Albatross']
+    LABEL_PATH = "./cub_200_2011_labels.txt"
+    target_exclude = ["001.Black_footed_Albatross"]
     targets = tf.io.gfile.GFile(LABEL_PATH).read().splitlines()
     mymodel = model.CUBResNet50Wrapper(LABEL_PATH, "./82.12_best_model.tar")
 else:
     source_dir = "./image_net_subsets"
     concepts = ["dotted", "striped"]
-    LABEL_PATH = './imagenet_comp_graph_label_strings.txt'
-    target_exclude = ['001.Black_footed_Albatross']
-    targets = ['zebra']
+    LABEL_PATH = "./imagenet_comp_graph_label_strings.txt"
+    target_exclude = ["001.Black_footed_Albatross"]
+    targets = ["zebra"]
     # mymodel = model.InceptionV3Wrapper(LABEL_PATH)
     mymodel = model.ResNet50Wrapper(LABEL_PATH)
 
@@ -72,19 +90,25 @@ for target in targets:
     if target in target_exclude:
         continue
 
-    mytcav = tcav.TCAV(target,
-                       concepts,
-                       bottlenecks,
-                       act_generator,
-                       alphas,
-                       cav_dir=cav_dir,
-                       num_random_exp=num_random_exp)
-                       
-    print('Loading mytcav')
+    mytcav = tcav.TCAV(
+        target,
+        concepts,
+        bottlenecks,
+        act_generator,
+        alphas,
+        cav_dir=cav_dir,
+        num_random_exp=num_random_exp,
+    )
+
+    print("Loading mytcav")
     results = mytcav.run()
     for result in results:
         print(result["cav_accuracies"])
-    utils_plot.plot_results(results, num_random_exp=num_random_exp, save_name=target+"_results.jpg")
-    
-    with open(target+'_saved_results.pkl','wb') as f:
-        pickle.dump(results,f)
+    utils_plot.plot_results(
+        results,
+        num_random_exp=num_random_exp,
+        save_name=target + "_results.jpg",
+    )
+
+    with open(target + "_saved_results.pkl", "wb") as f:
+        pickle.dump(results, f)
