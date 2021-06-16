@@ -11,4 +11,5 @@ nohup.out
 *best_model.tar
 .vscode
 *.npy
+*.ipynb
 
