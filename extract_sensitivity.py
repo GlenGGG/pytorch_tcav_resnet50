@@ -1,16 +1,11 @@
+import time
 import argparse
 import PIL.Image
 import numpy as np
-from torchvision.models.resnet import Bottleneck
-import cav as cav
 import model as model
-import tcav as tcav
 from tcav import TCAV
-import utils as utils
-import utils_plot as utils_plot  # utils_plot requires matplotlib
 import os
 import torch
-import pickle
 import activation_generator as act_gen
 import tensorflow as tf
 import extract_utils
@@ -309,6 +304,8 @@ def extract_sensitivity(
 
     cnt = 0
     gap = 40
+    time1 = time.time()
+    timer_gap = 5
     while cnt < train_size:
         end_idx = min(cnt + gap, train_size)
         imgs_slice = act_generator.load_images_from_files(
@@ -335,6 +332,27 @@ def extract_sensitivity(
                         random_exp_num,
                         cav_dir,
                     )
+                if (i + 1) % timer_gap == 0:
+                    time2 = time.time()
+                    time_per_sample = (time2 - time1) / timer_gap
+                    total_left_estimate = (
+                        train_size - cnt - 1
+                    ) * time_per_sample
+                    hours = int(total_left_estimate // 3600)
+                    mins = int((total_left_estimate % 3600) // 60)
+                    secs = int(total_left_estimate % 60)
+                    print(
+                        (
+                            "ETA: {:2d} hours, {:2d} mins, {:2d} secs"
+                            ", average time per sample: {:d} secs"
+                        ).format(
+                            hours,
+                            mins,
+                            secs,
+                            time_per_sample,
+                        )
+                    )
+                    time1 = time.time()
 
     np.save("train_sensitivities.npy", train_sensitivity)
     print("Done")
@@ -348,7 +366,7 @@ def validate(namespace, parser):
 
 
 if __name__ == "__main__":
-    tf.compat.v1.logging.set_verbosity(20)
+    tf.compat.v1.logging.set_verbosity(40)
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--train",

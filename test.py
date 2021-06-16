@@ -96,6 +96,7 @@ def test(
                     time_per_sample,
                 )
             )
+            time1 = time.time()
     return float(correct) / test_features.shape[0]
 
 
