@@ -23,6 +23,7 @@ import utils
 import numpy as np
 import time
 import tensorflow as tf
+from itertools import repeat
 
 
 class TCAV(object):
@@ -82,7 +83,7 @@ class TCAV(object):
         concept,
         cav,
         class_acts,
-        run_parallel=True,
+        run_parallel=False,
         num_workers=20,
     ):
         """Compute TCAV score.
@@ -586,23 +587,25 @@ class TCAV(object):
         alpha,
         random_exp_num,
         cav_dir,
+        num_workers=20,
     ):
         params = TCAV.get_params_from_concepts_and_target(
             target, concept, bottleneck, alpha, random_exp_num
         )
         i_ups = []
-        for param in params:
+
+        cav_hparams = CAV.default_hparams()
+        cav_hparams["alpha"] = alpha
+
+        def process_param(param, target_class_for_compute_tcav_score):
             concepts = param.concepts
-            target_class = param.target_class
             # first check if target class is in model.
 
-            tf.compat.v1.logging.info(
-                "running %s %s" % (target_class, concepts)
-            )
+            # tf.compat.v1.logging.info(
+            #     "running %s %s" % (target_class, concepts)
+            # )
 
             # Get CAVs
-            cav_hparams = CAV.default_hparams()
-            cav_hparams["alpha"] = alpha
             cav_instance = get_cav(
                 concepts,
                 bottleneck,
@@ -617,7 +620,6 @@ class TCAV(object):
             #     cav_hparams["model_type"],
             #     cav_hparams["alpha"],
             # )
-            target_class_for_compute_tcav_score = target_class
 
             cav_concept = concepts[0]
 
@@ -628,5 +630,9 @@ class TCAV(object):
                 cav_instance,
                 class_act,
             )
-            i_ups.append(i_up)
+            return i_up
+
+        pool = multiprocessing.Pool(num_workers)
+        i_ups = pool.starmap(process_param, zip(params, repeat(target)))
+
         return np.mean(np.array(i_ups))
