@@ -19,6 +19,8 @@ from torchvision import transforms
 from itertools import repeat
 import matplotlib.pyplot as plt
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 
 def get_rel_parts_loc(image_size, ori_image_size, ori_x, ori_y):
     width, height = ori_image_size
@@ -210,6 +212,7 @@ def cal_features(
 
 def extract_features(mymodel, is_train=True):
     scheme_str = "train" if is_train else "test"
+    print("Start extracting features for {} set".format(scheme_str))
     index = np.array(list(extract_utils.train_test_split.values())) == (
         1 if is_train else 0
     )
@@ -265,6 +268,7 @@ def extract_features(mymodel, is_train=True):
 
     np.save("{}_parts_locs_rel.npy".format(scheme_str), parts_locs_rel)
     features.flush()
+    print("Done")
 
 
 def extract_sensitivity(
@@ -277,6 +281,7 @@ def extract_sensitivity(
     cav_dir,
     run_parallel=False,
 ):
+    print("Start extracting sensitivities for train set")
     train_index = np.array(list(extract_utils.train_test_split.values())) == 1
     print("train_index: ", train_index)
     train_size = sum(train_index == 1).item()
@@ -330,7 +335,9 @@ def extract_sensitivity(
                         random_exp_num,
                         cav_dir,
                     )
-        np.save("train_sensitivities.npy", train_sensitivity)
+
+    np.save("train_sensitivities.npy", train_sensitivity)
+    print("Done")
 
 
 def validate(namespace, parser):
@@ -373,7 +380,23 @@ if __name__ == "__main__":
     if dataset == "CUB":
         source_dir = extract_utils.CONCEPT_ROOT_DIR
         print(source_dir)
-        concepts = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
+        concepts = [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12",
+            "13",
+            "14",
+            "15",
+        ]
         # concepts = ["3", "4"]
         LABEL_PATH = "./cub_200_2011_labels.txt"
         target_exclude = ["001.Black_footed_Albatross"]
