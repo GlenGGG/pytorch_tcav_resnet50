@@ -146,6 +146,7 @@ def load_images_from_files(
                 cnt += 1
                 parts_locs_np.append(parts_loc)
                 scales.append(scale)
+        pool.close()
         if cnt != min(len(filenames), max_imgs):
             print(imgs.shape, " ", min(len(filenames), max_imgs))
             raise ValueError("Failed to extract all images.")

@@ -62,6 +62,7 @@ def test(
             dis_pool = np.array(dis_pool)
             assert dis_pool.shape == (train_features.shape[0],)
             predict = train_label[np.argmin(dis_pool)]
+            pool.close()
         else:
             dis_pool = np.empty((train_features.shape[0]))
             for j in range(train_features.shape[0]):
