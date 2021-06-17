@@ -316,6 +316,8 @@ def extract_sensitivity(
             do_shuffle=False,
         )
 
+        cnt += gap
+
         class_acts = mymodel.run_examples(imgs_slice, bottleneck, True)
 
         if run_parallel:
