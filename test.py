@@ -16,7 +16,7 @@ def cal_distance(
     test_feature,
     train_parts_visible,
     test_parts_visible,
-    sensitivity_strength=10,
+    sensitivity_strength=1,
     with_sensitivity=True,
     plain_features=False,
 ):
@@ -62,7 +62,7 @@ def test(
     test_parts_locs,
     plain_features=False,
     with_sensitivity=True,
-    sensitivity_strength=10,
+    sensitivity_strength=1,
     run_parallel=True,
     num_workers=10,
 ):
@@ -151,7 +151,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sensitivity_strength",
         help="Extract training set sensitivity",
-        default=10,
+        default=1,
         type=int
     )
 

@@ -382,7 +382,9 @@ def extract_features(mymodel, is_train=True):
 
 def extract_plain_features(mymodel, is_train=True):
     scheme_str = "train" if is_train else "test"
-    logging.info("Start extracting plain features for {} set".format(scheme_str))
+    logging.info(
+        "Start extracting plain features for {} set".format(scheme_str)
+    )
     index = np.array(list(extract_utils.train_test_split.values())) == (
         1 if is_train else 0
     )
@@ -488,7 +490,7 @@ def extract_sensitivity(
         else:
             for i in range(class_acts.shape[0]):
                 for j in range(len(concepts)):
-                    train_sensitivity[i, j] = TCAV.get_sensitivities(
+                    train_sensitivity[cnt + i, j] = TCAV.get_sensitivities(
                         mymodel,
                         class_acts[i : i + 1],
                         concepts[j],
