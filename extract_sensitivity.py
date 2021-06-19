@@ -1,3 +1,4 @@
+import logging
 import time
 import argparse
 import PIL.Image
@@ -14,7 +15,112 @@ from torchvision import transforms
 from itertools import repeat
 import matplotlib.pyplot as plt
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+logging.basicConfig(filename="log.txt", level=logging.INFO)
+
+
+def load_image_from_file_no_parts(filename, shape):
+    """Given a filename, try to open the file. If failed, return None.
+    Args:
+        filename: location of the image file
+        shape: the shape of the image file to be scaled
+    Returns:
+        the image if succeeds, None if fails.
+    Rasies:
+        exception if the image was not the right shape.
+    """
+    image_size = shape[0]
+    transform = transforms.Compose(
+        [
+            transforms.Resize(image_size),
+            transforms.CenterCrop(image_size),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)
+            ),
+        ]
+    )
+
+    if not tf.io.gfile.exists(filename):
+        tf.compat.v1.logging.error("Cannot find file: {}".format(filename))
+        return None
+    image = PIL.Image.open(tf.io.gfile.GFile(filename, "rb")).convert("RGB")
+    img = transform(image)
+
+    if not (len(img.shape) == 3 and img.shape[0] == 3):
+        tf.compat.v1.logging.error(
+            "wrong shape: {}, shape is : {}".format(filename, img.shape)
+        )
+        return None
+    else:
+        return img
+
+
+def load_images_from_files_no_parts(
+    filenames,
+    max_imgs=500,
+    do_shuffle=True,
+    run_parallel=True,
+    shape=(299, 299),
+    num_workers=10,
+):
+    """Return image arrays from filenames.
+    Args:
+        filenames: locations of image files.
+        max_imgs: maximum number of images from filenames.
+        do_shuffle: before getting max_imgs files, shuffle the names or not
+        run_parallel: get images in parallel or not
+        shape: desired shape of the image
+        num_workers: number of workers in parallelization.
+    Returns:
+        image arrays
+    """
+    image_size = shape[0]
+    imgs = []
+    # First shuffle a copy of the filenames.
+    filenames = filenames[:]
+    if do_shuffle:
+        np.random.shuffle(filenames)
+
+    imgs = torch.empty((0, 3, image_size, image_size))
+    if run_parallel:
+        pool = multiprocessing.Pool(num_workers)
+        img_pool = pool.map(
+            lambda filename: load_image_from_file_no_parts(filename, shape),
+            filenames[:max_imgs],
+        )
+        # logging.info(img_pool)
+        for img in img_pool:
+            if img is not None:
+                # imgs.append(img)
+                img = img.view(1, 3, shape[0], shape[1])
+                imgs = torch.cat([imgs, img], dim=0)
+        if imgs.shape[0] <= 1:
+            raise ValueError(
+                "You must have more than 1 image in each class to run TCAV."
+            )
+    else:
+        for filename in filenames:
+            img = load_image_from_file_no_parts(filename, shape)
+            if img is not None:
+                # imgs.append(img)
+                img = img.view(1, 3, shape[0], shape[1])
+                imgs = torch.cat([imgs, img], dim=0)
+            if imgs.shape[0] <= 1:
+                raise ValueError(
+                    "You must have more than 1 image in each class to run TCAV."
+                )
+            elif imgs.shape[1] >= max_imgs:
+                break
+            # if len(imgs) <= 1:
+            #     raise ValueError(
+            #         "You must have more than 1 image in each class to run TCAV."
+            #     )
+            # elif len(imgs) >= max_imgs:
+            #     break
+
+    return imgs
+    # return np.array(imgs)
 
 
 def get_rel_parts_loc(image_size, ori_image_size, ori_x, ori_y):
@@ -31,7 +137,7 @@ def show_image_and_parts(imgs, parts_locs, shape):
     for i in range(imgs.shape[0]):
         img = imgs[i].permute(1, 2, 0).view(shape[0], shape[1], -1)
         plt.imshow(img)
-        print(parts_locs.shape)
+        logging.info(parts_locs.shape)
         plt.scatter(
             [x for x in parts_locs[i, :, 0]],
             [y for y in parts_locs[i, :, 1]],
@@ -67,9 +173,9 @@ def load_image_from_file(filename, shape, parts_loc, bounding_box):
         return None
 
     image = PIL.Image.open(tf.io.gfile.GFile(filename, "rb")).convert("RGB")
-    # print("before transform's shape: ", image.size)
+    # logging.info("before transform's shape: ", image.size)
     img = transform(image)
-    # print("after transform's shape: ", img.shape)
+    # logging.info("after transform's shape: ", img.shape)
 
     scale = 1024 / bounding_box[2]
     parts_rel_loc = np.zeros((15, 3))
@@ -137,7 +243,7 @@ def load_images_from_files(
                 bounding_boxes[:max_imgs],
             ),
         )
-        # print(img_pool)
+        # logging.info(img_pool)
         for img, parts_loc, scale in img_pool:
             if img is not None:
                 # imgs.append(img)
@@ -148,7 +254,7 @@ def load_images_from_files(
                 scales.append(scale)
         pool.close()
         if cnt != min(len(filenames), max_imgs):
-            print(imgs.shape, " ", min(len(filenames), max_imgs))
+            logging.info(imgs.shape, " ", min(len(filenames), max_imgs))
             raise ValueError("Failed to extract all images.")
     else:
         for filename in filenames:
@@ -164,7 +270,7 @@ def load_images_from_files(
             if cnt >= max_imgs:
                 break
         if cnt != min(len(filenames), max_imgs):
-            print(imgs.shape, " ", min(len(filenames), max_imgs))
+            logging.info(imgs.shape, " ", min(len(filenames), max_imgs))
             raise ValueError("Failed to extract all images.")
 
     return imgs, np.array(parts_locs_np), np.array(scale)
@@ -176,45 +282,52 @@ def cal_features(
     bottleneck,
     modelwrapper: model.CUBResNet50Wrapper,
     image_size,
+    only_plain=False,
 ):
     features = modelwrapper.run_examples(imgs, bottleneck, True)
-    # print("features.shape: ", features.shape)
-    feature_len = features.shape[-1]
-    feature_parts = np.zeros((features.shape[0], 15, features.shape[1]))
-    assert parts_locs[:, :, :2].any() < 224
-    feature_parts_loc = np.floor(
-        parts_locs[:, :, :2] * (feature_len / image_size)
-    ).astype(int)
-    for i in range(feature_parts.shape[0]):
-        for j in range(feature_parts.shape[1]):
-            if parts_locs[i, j, 2] < 0.9:
-                continue
-            # Note, the feature's shape is N, C, H, W
-            if feature_parts_loc[i, j, 1] > 6 or feature_parts_loc[i, j, 0] > 6:
-                print("out of bound", parts_locs[i, j, :])
-                print(
-                    "i: ",
-                    i,
-                    "h: ",
-                    feature_parts_loc[i, j, 1],
-                    "w: ",
-                    feature_parts_loc[i, j, 0],
-                )
-            feature_parts[i, j, :] = features[
-                i, :, feature_parts_loc[i, j, 1], feature_parts_loc[i, j, 0]
-            ]
-    return feature_parts
+    if only_plain:
+        return features.contiguous().view(features.shape[0], -1)
+    else:
+        # logging.info("features.shape: ", features.shape)
+        feature_len = features.shape[-1]
+        feature_parts = np.zeros((features.shape[0], 15, features.shape[1]))
+        assert parts_locs[:, :, :2].any() < 224
+        feature_parts_loc = np.floor(
+            parts_locs[:, :, :2] * (feature_len / image_size)
+        ).astype(int)
+        for i in range(feature_parts.shape[0]):
+            for j in range(feature_parts.shape[1]):
+                if parts_locs[i, j, 2] < 0.9:
+                    continue
+                # Note, the feature's shape is N, C, H, W
+                if (
+                    feature_parts_loc[i, j, 1] > 6
+                    or feature_parts_loc[i, j, 0] > 6
+                ):
+                    logging.info("out of bound", parts_locs[i, j, :])
+                    logging.info(
+                        "i: ",
+                        i,
+                        "h: ",
+                        feature_parts_loc[i, j, 1],
+                        "w: ",
+                        feature_parts_loc[i, j, 0],
+                    )
+                feature_parts[i, j, :] = features[
+                    i, :, feature_parts_loc[i, j, 1], feature_parts_loc[i, j, 0]
+                ]
+        return feature_parts
 
 
 def extract_features(mymodel, is_train=True):
     scheme_str = "train" if is_train else "test"
-    print("Start extracting features for {} set".format(scheme_str))
+    logging.info("Start extracting features for {} set".format(scheme_str))
     index = np.array(list(extract_utils.train_test_split.values())) == (
         1 if is_train else 0
     )
-    print("{}_index: ".format(scheme_str), index)
+    logging.info("{}_index: ".format(scheme_str), index)
     size = sum(index == 1).item()
-    print("{} size: ".format(scheme_str), size)
+    logging.info("{} size: ".format(scheme_str), size)
     features = np.memmap(
         "{}_features.npy".format(scheme_str),
         dtype=np.float32,
@@ -255,7 +368,7 @@ def extract_features(mymodel, is_train=True):
 
         parts_locs_rel[cnt:end_idx] = parts_locs_slice
         # show_image_and_parts(imgs_slice, parts_locs_slice, (224, 224))
-        # print(imgs_slice.shape)
+        # logging.info(imgs_slice.shape)
         feature_parts = cal_features(
             imgs_slice, parts_locs_slice, feature_bottlenecks, mymodel, 224
         )
@@ -264,7 +377,59 @@ def extract_features(mymodel, is_train=True):
 
     np.save("{}_parts_locs_rel.npy".format(scheme_str), parts_locs_rel)
     features.flush()
-    print("Done")
+    logging.info("Done")
+
+
+def extract_plain_features(mymodel, is_train=True):
+    scheme_str = "train" if is_train else "test"
+    logging.info("Start extracting plain features for {} set".format(scheme_str))
+    index = np.array(list(extract_utils.train_test_split.values())) == (
+        1 if is_train else 0
+    )
+    logging.info("{}_index: ".format(scheme_str), index)
+    size = sum(index == 1).item()
+    logging.info("{} size: ".format(scheme_str), size)
+    features = np.memmap(
+        "{}_features_plain.npy".format(scheme_str),
+        dtype=np.float32,
+        mode="w+",
+        shape=(size, 2048 * 7 * 7),
+    )
+
+    labels = (np.array(list(extract_utils.image_label.values())) - 1)[index]
+    np.save("{}_labels.npy".format(scheme_str), labels)
+
+    cnt = 0
+    gap = 40
+
+    _image_dirs = extract_utils.image_id_dir.values()
+    image_dirs = [
+        os.path.join(extract_utils.CUB_ROOT_DIR, extract_utils.IMAGE_DIR, d)
+        for d in _image_dirs
+    ]
+    image_dirs = np.array(image_dirs)
+    del _image_dirs
+    image_dirs = image_dirs[index]
+    while cnt < size:
+        end_idx = min(cnt + gap, size)
+        imgs_slice, parts_locs_slice, _ = load_images_from_files(
+            image_dirs[cnt:end_idx],
+            max_imgs=gap,
+            shape=(224, 224),
+        )
+
+        features[cnt:end_idx, :] = cal_features(
+            imgs_slice,
+            parts_locs_slice,
+            feature_bottlenecks,
+            mymodel,
+            224,
+            True,
+        )
+        cnt += gap
+
+    features.flush()
+    logging.info("Done")
 
 
 def extract_sensitivity(
@@ -277,11 +442,11 @@ def extract_sensitivity(
     cav_dir,
     run_parallel=False,
 ):
-    print("Start extracting sensitivities for train set")
+    logging.info("Start extracting sensitivities for train set")
     train_index = np.array(list(extract_utils.train_test_split.values())) == 1
-    print("train_index: ", train_index)
+    logging.info("train_index: ", train_index)
     train_size = sum(train_index == 1).item()
-    print("train size: ", train_size)
+    logging.info("train size: ", train_size)
 
     # labels = (np.array(list(extract_utils.image_label.values())) - 1)[
     #     train_index
@@ -289,7 +454,7 @@ def extract_sensitivity(
     label_names = (np.array(list(extract_utils.image_label_name.values())))[
         train_index
     ]
-    # print(label_names[:10])
+    # logging.info(label_names[:10])
 
     _image_dirs = extract_utils.image_id_dir.values()
     image_dirs = [
@@ -316,8 +481,6 @@ def extract_sensitivity(
             do_shuffle=False,
         )
 
-        cnt += gap
-
         class_acts = mymodel.run_examples(imgs_slice, bottleneck, True)
 
         if run_parallel:
@@ -339,12 +502,12 @@ def extract_sensitivity(
                     time2 = time.time()
                     time_per_sample = (time2 - time1) / timer_gap
                     total_left_estimate = (
-                        train_size - cnt - 1
+                        train_size - cnt - 1 - i
                     ) * time_per_sample
                     hours = int(total_left_estimate // 3600)
                     mins = int((total_left_estimate % 3600) // 60)
                     secs = int(total_left_estimate % 60)
-                    print(
+                    logging.info(
                         (
                             "ETA: {:2d} hours, {:2d} mins, {:2d} secs"
                             ", average time per sample: {:d} secs"
@@ -352,19 +515,20 @@ def extract_sensitivity(
                             hours,
                             mins,
                             secs,
-                            time_per_sample,
+                            int(time_per_sample),
                         )
                     )
                     time1 = time.time()
+        cnt += gap
 
     np.save("train_sensitivities.npy", train_sensitivity)
-    print("Done")
+    logging.info("Done")
 
 
 def validate(namespace, parser):
-    # print([arg for arg in vars(namespace).values()])
+    # logging.info([arg for arg in vars(namespace).values()])
     if not any(arg for arg in vars(namespace).values()):
-        parser.print_help()
+        parser.logging.info_help()
         parser.exit(2)
 
 
@@ -380,6 +544,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--test",
         help="Extract test features",
+        default=False,
+        action="store_true",
+    )
+    parser.add_argument(
+        "--plain",
+        help="Extract plain features without part info, e.g., the direct output of feature network",
         default=False,
         action="store_true",
     )
@@ -400,7 +570,7 @@ if __name__ == "__main__":
 
     if dataset == "CUB":
         source_dir = extract_utils.CONCEPT_ROOT_DIR
-        print(source_dir)
+        logging.info(source_dir)
         concepts = [
             "1",
             "2",
@@ -459,10 +629,16 @@ if __name__ == "__main__":
         os.makedirs(os.path.join(feature_bank_save_root, "test"))
 
     if args.train:
-        extract_features(mymodel)
+        if not args.plain:
+            extract_features(mymodel)
+        else:
+            extract_plain_features(mymodel)
     if args.test:
-        extract_features(mymodel, False)
+        if not args.plain:
+            extract_features(mymodel, False)
+        else:
+            extract_plain_features(mymodel, False)
     if args.sensitivity:
         extract_sensitivity(
-            mymodel, act_generator, bottleneck, concepts, alpha, 100, cav_dir
+            mymodel, act_generator, bottleneck, concepts, alpha, 10, cav_dir
         )

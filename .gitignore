@@ -12,4 +12,6 @@ nohup.out
 .vscode
 *.npy
 *.ipynb
+log.txt
+*.log
 

@@ -10,8 +10,9 @@ import random
 from PIL import Image
 
 # constants
-CUB_ROOT_DIR = "G://projects/pythonProjects/data/CUB_200_2011"
-# CUB_ROOT_DIR = "/home/computer/WBH/bmvc/CUB_200_2011"
+# CUB_ROOT_DIR = "G://projects/pythonProjects/data/CUB_200_2011"
+CUB_ROOT_DIR = "/home/computer/WBH/bmvc/CUB_200_2011"
+
 IMAGE_DIR = os.path.join(CUB_ROOT_DIR, "CUB_200_2011/images")
 IMAGE_CLASS_DIR = os.path.join(CUB_ROOT_DIR, "CUB_200_2011/classes.txt")
 IMAGE_LABEL_DIR = os.path.join(
