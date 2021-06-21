@@ -19,6 +19,7 @@ def cal_distance(
     sensitivity_strength=1,
     with_sensitivity=True,
     plain_features=False,
+    strip_negative_sensitivity=False,
 ):
     # print("train_feature.shape: ",train_feature.shape)
     # train/test_feature's shape: 15x1024
@@ -38,6 +39,8 @@ def cal_distance(
             train_sensitivity = sensitivity_strength * (
                 train_sensitivity * train_parts_visible * test_parts_visible
             )
+            if strip_negative_sensitivity:
+                train_sensitivity[train_sensitivity < 0] = 0
             # softmax
             train_sensitivity = np.exp(train_sensitivity) / (
                 np.sum(np.exp(train_sensitivity))
@@ -63,6 +66,7 @@ def test(
     plain_features=False,
     with_sensitivity=True,
     sensitivity_strength=1,
+    strip_negative_sensitivity=False,
     run_parallel=True,
     num_workers=10,
 ):
@@ -83,6 +87,7 @@ def test(
                     repeat(sensitivity_strength),
                     repeat(with_sensitivity),
                     repeat(plain_features),
+                    repeat(strip_negative_sensitivity),
                 ),
             )
             dis_pool = np.array(dis_pool)
@@ -100,6 +105,7 @@ def test(
                     sensitivity_strength,
                     with_sensitivity,
                     plain_features,
+                    strip_negative_sensitivity
                 )
             predict = train_label[np.argmin(dis_pool)]
 
@@ -152,7 +158,14 @@ if __name__ == "__main__":
         "--sensitivity_strength",
         help="Extract training set sensitivity",
         default=1,
-        type=int
+        type=int,
+    )
+
+    parser.add_argument(
+        "--strip_negative_sensitivity",
+        help="Set negative sensitivities to 0",
+        default=False,
+        action="store_true",
     )
 
     args = parser.parse_args()
@@ -164,13 +177,13 @@ if __name__ == "__main__":
             "train_features_plain.npy",
             mode="r",
             dtype=np.float32,
-            shape=(train_label.shape[0], 2048)
+            shape=(train_label.shape[0], 2048),
         )
         test_features = np.memmap(
             "test_features_plain.npy",
             mode="r",
             dtype=np.float32,
-            shape=(train_label.shape[0], 2048)
+            shape=(train_label.shape[0], 2048),
         )
     else:
         train_features = np.memmap(
@@ -200,6 +213,7 @@ if __name__ == "__main__":
         plain_features=args.plain,
         with_sensitivity=not args.without_sensitivity,
         sensitivity_strength=args.sensitivity_strength,
+        strip_negative_sensitivity=args.strip_negative_sensitivity
     )
 
     logging.info("Accuracy: {:.2f}".format(accuracy))
