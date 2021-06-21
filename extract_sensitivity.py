@@ -286,7 +286,7 @@ def cal_features(
 ):
     features = modelwrapper.run_examples(imgs, bottleneck, True)
     if only_plain:
-        return features.contiguous().view(features.shape[0], -1)
+        return features.reshape((features.shape[0], -1))
     else:
         # logging.info("features.shape: ", features.shape)
         feature_len = features.shape[-1]
@@ -325,9 +325,9 @@ def extract_features(mymodel, is_train=True):
     index = np.array(list(extract_utils.train_test_split.values())) == (
         1 if is_train else 0
     )
-    logging.info("{}_index: ".format(scheme_str), index)
+    logging.info("{}_index: {}".format(scheme_str, index))
     size = sum(index == 1).item()
-    logging.info("{} size: ".format(scheme_str), size)
+    logging.info("{} size: {}".format(scheme_str, size))
     features = np.memmap(
         "{}_features.npy".format(scheme_str),
         dtype=np.float32,
@@ -388,9 +388,9 @@ def extract_plain_features(mymodel, is_train=True):
     index = np.array(list(extract_utils.train_test_split.values())) == (
         1 if is_train else 0
     )
-    logging.info("{}_index: ".format(scheme_str), index)
+    logging.info("{}_index: {}".format(scheme_str, index))
     size = sum(index == 1).item()
-    logging.info("{} size: ".format(scheme_str), size)
+    logging.info("{} size: {}".format(scheme_str, size))
     features = np.memmap(
         "{}_features_plain.npy".format(scheme_str),
         dtype=np.float32,
