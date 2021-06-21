@@ -414,7 +414,7 @@ def extract_plain_features(mymodel, is_train=True):
     image_dirs = image_dirs[index]
     while cnt < size:
         end_idx = min(cnt + gap, size)
-        imgs_slice, parts_locs_slice, _ = load_images_from_files(
+        imgs_slice, parts_locs_slice, _ = load_images_from_files_no_parts(
             image_dirs[cnt:end_idx],
             max_imgs=gap,
             shape=(224, 224),
